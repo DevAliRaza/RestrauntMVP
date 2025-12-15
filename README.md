@@ -1,24 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Restaurant Menu + Online Ordering System for Lahore
 
-## Getting Started
+A complete digital solution for restaurants in Lahore to manage their menu, accept online orders, and provide a seamless customer experience with QR codes, WhatsApp ordering, and in-app order management.
 
-First, run the development server:
+## Prerequisites
+
+1. **Node.js 18+** installed
+2. **Supabase account** - Create one at [supabase.com](https://supabase.com)
+3. **Supabase project** with the database schema set up (see Database Setup below)
+
+## Setup Instructions
+
+### 1. Install Dependencies
+
+```bash
+npm install
+```
+
+### 2. Configure Environment Variables
+
+Create a `.env.local` file in the root directory with your Supabase credentials:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+**Where to find these values:**
+- Go to your Supabase project dashboard
+- Navigate to Settings → API
+- Copy the "Project URL" and "anon/public" key
+
+### 3. Database Setup
+
+Run the SQL schema provided in the Supabase SQL editor. This includes:
+- User profiles and authentication
+- Restaurants and branches
+- Menu categories and items
+- Orders and order items
+- Promotions and loyalty
+- QR codes and analytics
+
+### 4. Run Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to see the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `app/` - Next.js App Router pages and layouts
+- `components/` - Reusable React components
+- `lib/supabase/` - Supabase client configuration
+- `app/api/` - API routes for QR generation, payments, analytics
 
 ## Learn More
 
