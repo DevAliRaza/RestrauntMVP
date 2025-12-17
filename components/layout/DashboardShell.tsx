@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { LogoutButton } from '@/components/auth/LogoutButton';
 
 export default function DashboardShell({
   children,
@@ -27,7 +28,8 @@ export default function DashboardShell({
       </aside>
       <main className="flex flex-1 flex-col">
         <header className="flex h-14 items-center justify-between border-b border-zinc-900 px-4 text-xs">
-          <span className="font-semibold">{restaurantSlug}</span>
+          <span className="font-semibold truncate pr-4">{restaurantSlug}</span>
+          <LogoutButton />
         </header>
         <div className="flex-1 px-4 py-4">{children}</div>
       </main>
