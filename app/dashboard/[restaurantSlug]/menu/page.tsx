@@ -5,14 +5,15 @@ import MenuManager from './MenuManager';
 export default async function MenuPage({
   params,
 }: {
-  params: { restaurantSlug: string };
+  params: Promise<{ restaurantSlug: string }>;
 }) {
+  const { restaurantSlug } = await params;
   const supabase = await createSupabaseServerClient();
 
   const { data: restaurant } = await supabase
     .from('restaurants')
     .select('id')
-    .eq('slug', params.restaurantSlug)
+    .eq('slug', restaurantSlug)
     .single();
 
   const { data: categories } = await supabase
@@ -28,10 +29,10 @@ export default async function MenuPage({
     .order('position');
 
   return (
-    <DashboardShell restaurantSlug={params.restaurantSlug}>
+    <DashboardShell restaurantSlug={restaurantSlug}>
       <MenuManager
         restaurantId={restaurant?.id}
-        restaurantSlug={params.restaurantSlug}
+        restaurantSlug={restaurantSlug}
         initialCategories={categories ?? []}
         initialItems={items ?? []}
       />

@@ -4,15 +4,23 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 export default async function RestaurantDashboardPage({
   params,
 }: {
-  params: { restaurantSlug: string };
+  params: Promise<{ restaurantSlug: string }>;
 }) {
+  const { restaurantSlug } = await params;
   const supabase = await createSupabaseServerClient();
 
   const { data: restaurant } = await supabase
     .from('restaurants')
     .select('id, name')
-    .eq('slug', params.restaurantSlug)
+    .eq('slug', restaurantSlug)
     .single();
+
+  // If the slug does not correspond to a restaurant (e.g. someone hit
+  // /dashboard/dashboard manually), send them back through the index
+  // redirect logic which finds their real restaurant.
+  if (!restaurant) {
+    redirect('/dashboard');
+  }
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -23,10 +31,10 @@ export default async function RestaurantDashboardPage({
     .gte('created_at', today);
 
   return (
-    <DashboardShell restaurantSlug={params.restaurantSlug}>
+    <DashboardShell restaurantSlug={restaurantSlug}>
       <div className="space-y-4 text-xs">
         <h1 className="text-lg font-semibold">
-          {restaurant?.name ?? 'Restaurant'} overview
+          {restaurant.name} overview
         </h1>
         <div className="grid gap-4 md:grid-cols-3">
           <StatCard label="Orders today" value={ordersToday?.length ?? 0} />

@@ -16,16 +16,23 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
-    console.log('Attempting login with:', email);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const cleanedEmail = email.trim().toLowerCase();
+    console.log('Attempting login with:', cleanedEmail);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: cleanedEmail,
+      password,
+    });
     console.log('Login result:', { data, error });
-    setLoading(false);
 
     if (error) {
       console.error('Login error:', error);
       setError(`${error.message} (Code: ${error.status || 'unknown'})`);
+      setLoading(false);
     } else {
-      console.log('Login successful, redirecting...');
+      console.log('Login successful, waiting for session...');
+      // Wait for session to be written to cookies before redirecting
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      console.log('Redirecting to dashboard...');
       window.location.href = '/dashboard';
     }
   };

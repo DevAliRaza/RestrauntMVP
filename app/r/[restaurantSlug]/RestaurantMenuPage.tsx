@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 
 type Restaurant = {
@@ -51,9 +51,41 @@ export default function RestaurantMenuPage({
   table,
 }: Props) {
   const [cartOpen, setCartOpen] = useState(false);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const storageKey = `restaurant-cart:${restaurant.slug}`;
+  const isInitialMount = useRef(true);
+  
+  // Initialize cart with lazy initializer from localStorage
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as CartItem[];
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      }
+    } catch {
+      // ignore parse errors
+    }
+    return [];
+  });
 
-  const addToCart = (item: MenuItem) => {
+  // Persist cart to localStorage whenever it changes (after initial mount)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(cart));
+    } catch {
+      // ignore quota errors
+    }
+  }, [cart, storageKey]);
+
+  const incrementItem = (item: MenuItem) => {
     setCart((prev) => {
       const existing = prev.find((i) => i.id === item.id);
       const price = Number(item.discount_price ?? item.base_price);
@@ -65,6 +97,19 @@ export default function RestaurantMenuPage({
       return [...prev, { id: item.id, name: item.name, price, quantity: 1 }];
     });
     setCartOpen(true);
+  };
+
+  const decrementItem = (id: string) => {
+    setCart((prev) => {
+      const existing = prev.find((i) => i.id === id);
+      if (!existing) return prev;
+      if (existing.quantity <= 1) {
+        return prev.filter((i) => i.id !== id);
+      }
+      return prev.map((i) =>
+        i.id === id ? { ...i, quantity: i.quantity - 1 } : i
+      );
+    });
   };
 
   const subtotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
@@ -124,43 +169,65 @@ export default function RestaurantMenuPage({
                 <p className="text-xs text-zinc-400">{cat.description}</p>
               )}
               <div className="space-y-3">
-        {items
-          .filter((i) => i.category_id === cat.id)
-          .map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => addToCart(item)}
-                      className="flex w-full items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 text-left transition hover:border-amber-400/60"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="font-medium">{item.name}</p>
-                          <p className="text-sm font-semibold text-amber-300">
-                            Rs{' '}
-                            {Number(
-                              item.discount_price ?? item.base_price
-                            ).toFixed(0)}
-                          </p>
+                {items
+                  .filter((i) => i.category_id === cat.id)
+                  .map((item) => {
+                    const inCart = cart.find((c) => c.id === item.id);
+                    const qty = inCart?.quantity ?? 0;
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex w-full items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 text-left transition hover:border-amber-400/60"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="font-medium">{item.name}</p>
+                            <p className="text-sm font-semibold text-amber-300">
+                              Rs{' '}
+                              {Number(
+                                item.discount_price ?? item.base_price
+                              ).toFixed(0)}
+                            </p>
+                          </div>
+                          {item.description && (
+                            <p className="mt-1 line-clamp-2 text-xs text-zinc-400">
+                              {item.description}
+                            </p>
+                          )}
                         </div>
-                        {item.description && (
-                          <p className="mt-1 line-clamp-2 text-xs text-zinc-400">
-                            {item.description}
-                          </p>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => decrementItem(item.id)}
+                            disabled={qty === 0}
+                            className="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-700 text-xs text-zinc-200 disabled:opacity-40"
+                          >
+                            -
+                          </button>
+                          <span className="min-w-[1.5rem] text-center text-xs">
+                            {qty}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => incrementItem(item)}
+                            className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-400 text-xs font-semibold text-zinc-950 hover:bg-amber-300"
+                          >
+                            +
+                          </button>
+                        </div>
+                        {item.image_url && (
+                          <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-zinc-800">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={item.image_url}
+                              alt={item.name}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
                         )}
                       </div>
-                      {item.image_url && (
-                        <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-zinc-800">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={item.image_url}
-                            alt={item.name}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      )}
-                    </button>
-                  ))}
+                    );
+                  })}
               </div>
             </section>
           ))}

@@ -1,12 +1,13 @@
 import DashboardShell from '@/components/layout/DashboardShell';
 
-export default function PromotionsPage({
+export default async function PromotionsPage({
   params,
 }: {
-  params: { restaurantSlug: string };
+  params: Promise<{ restaurantSlug: string }>;
 }) {
+  const { restaurantSlug } = await params;
   return (
-    <DashboardShell restaurantSlug={params.restaurantSlug}>
+    <DashboardShell restaurantSlug={restaurantSlug}>
       <div className="space-y-4 text-xs">
         <h1 className="text-lg font-semibold">Promotions & Discount Codes</h1>
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-8 text-center">

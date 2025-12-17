@@ -4,25 +4,26 @@ import DashboardShell from '@/components/layout/DashboardShell';
 export default async function OrdersPage({
   params,
 }: {
-  params: { restaurantSlug: string };
+  params: Promise<{ restaurantSlug: string }>;
 }) {
+  const { restaurantSlug } = await params;
   const supabase = await createSupabaseServerClient();
 
   const { data: restaurant } = await supabase
     .from('restaurants')
     .select('id, name')
-    .eq('slug', params.restaurantSlug)
+    .eq('slug', restaurantSlug)
     .single();
 
   const { data: orders } = await supabase
     .from('orders')
-    .select('*')
+    .select('*, order_items(id, name_snapshot, quantity, total_price)')
     .eq('restaurant_id', restaurant?.id ?? null)
     .order('created_at', { ascending: false })
     .limit(50);
 
   return (
-    <DashboardShell restaurantSlug={params.restaurantSlug}>
+    <DashboardShell restaurantSlug={restaurantSlug}>
       <div className="space-y-4 text-xs">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold">Orders</h1>
@@ -45,43 +46,71 @@ export default async function OrdersPage({
                 key={order.id}
                 className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-4"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-zinc-200">
-                        {order.order_number}
-                      </span>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                          order.status === 'new'
-                            ? 'bg-emerald-500/10 text-emerald-300'
-                            : order.status === 'completed'
-                              ? 'bg-zinc-700 text-zinc-400'
-                              : 'bg-amber-500/10 text-amber-300'
-                        }`}
-                      >
-                        {order.status}
-                      </span>
+                <details className="group space-y-2">
+                  <summary className="flex cursor-pointer list-none items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-zinc-200">
+                          {order.order_number}
+                        </span>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                            order.status === 'new'
+                              ? 'bg-emerald-500/10 text-emerald-300'
+                              : order.status === 'completed'
+                                ? 'bg-zinc-700 text-zinc-400'
+                                : 'bg-amber-500/10 text-amber-300'
+                          }`}
+                        >
+                          {order.status}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-zinc-400">
+                        {order.customer_name || 'Guest'} · {order.customer_phone}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-zinc-500">
+                        {new Date(order.created_at).toLocaleString('en-PK', {
+                          dateStyle: 'short',
+                          timeStyle: 'short',
+                        })}
+                      </p>
                     </div>
-                    <p className="mt-1 text-xs text-zinc-400">
-                      {order.customer_name || 'Guest'} · {order.customer_phone}
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-zinc-500">
-                      {new Date(order.created_at).toLocaleString('en-PK', {
-                        dateStyle: 'short',
-                        timeStyle: 'short',
-                      })}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-amber-300">
-                      Rs {Number(order.total_amount).toFixed(0)}
-                    </p>
-                    <p className="text-[10px] text-zinc-500">
-                      {order.delivery_type}
-                    </p>
-                  </div>
-                </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-amber-300">
+                        Rs {Number(order.total_amount).toFixed(0)}
+                      </p>
+                      <p className="text-[10px] text-zinc-500">
+                        {order.delivery_type}
+                      </p>
+                    </div>
+                  </summary>
+
+                  {order.order_items && order.order_items.length > 0 && (
+                    <div className="mt-2 space-y-1 border-t border-zinc-800 pt-2 text-[11px] text-zinc-300">
+                      {order.order_items.map((item: {
+                        id: string;
+                        name_snapshot: string | null;
+                        quantity: number | null;
+                        total_price: number | null;
+                      }) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between"
+                        >
+                          <span>
+                            {item.name_snapshot}{' '}
+                            <span className="text-zinc-500">
+                              x{item.quantity}
+                            </span>
+                          </span>
+                          <span>
+                            Rs {Number(item.total_price ?? 0).toFixed(0)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </details>
               </div>
             ))}
           </div>

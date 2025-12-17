@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+
+type CartItem = { id: string; name: string; price: number; quantity: number };
 
 export default function CheckoutPage({
   params,
 }: {
-  params: { restaurantSlug: string };
+  params: Promise<{ restaurantSlug: string }>;
 }) {
   const supabase = createSupabaseBrowserClient();
   const router = useRouter();
@@ -16,9 +18,25 @@ export default function CheckoutPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // In a fuller implementation, hydrate cart from a shared store or localStorage.
-  const cart: { id: string; name: string; price: number; quantity: number }[] =
-    [];
+  const { restaurantSlug } = use(params);
+  const storageKey = `restaurant-cart:${restaurantSlug}`;
+
+  // Initialize cart with lazy initializer from localStorage
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as CartItem[];
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      }
+    } catch {
+      // ignore parse errors
+    }
+    return [];
+  });
 
   const placeOrder = async () => {
     if (!cart.length) {
@@ -31,7 +49,7 @@ export default function CheckoutPage({
     const { data: restaurant, error: rErr } = await supabase
       .from('restaurants')
       .select('id')
-      .eq('slug', params.restaurantSlug)
+      .eq('slug', restaurantSlug)
       .single();
 
     if (rErr || !restaurant) {
@@ -83,7 +101,17 @@ export default function CheckoutPage({
       return;
     }
 
-    router.push(`/r/${params.restaurantSlug}/order-success`);
+    // Clear cart
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(storageKey);
+      }
+    } catch {
+      // ignore
+    }
+    setCart([]);
+
+    router.push(`/r/${restaurantSlug}/order-success`);
   };
 
   return (
@@ -112,6 +140,11 @@ export default function CheckoutPage({
             />
           </div>
         </div>
+        {cart.length === 0 && (
+          <p className="text-[11px] text-red-400">
+            Your cart is empty. Go back and add items first.
+          </p>
+        )}
         {error && <p className="text-[11px] text-red-400">{error}</p>}
         <button
           type="button"

@@ -24,8 +24,9 @@ export default function RegisterPage() {
     setLoading(true);
     setError(null);
 
+    const cleanedEmail = email.trim().toLowerCase();
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email,
+      email: cleanedEmail,
       password,
     });
 
