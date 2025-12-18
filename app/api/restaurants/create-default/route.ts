@@ -31,8 +31,11 @@ export async function POST() {
     .maybeSingle();
 
   if (member?.restaurants) {
-    const slug = (member.restaurants as { slug: string }).slug;
-    return NextResponse.json({ slug });
+    const rel = member.restaurants as { slug: string } | { slug: string }[];
+    const slug = Array.isArray(rel) ? rel[0]?.slug : rel.slug;
+    if (slug) {
+      return NextResponse.json({ slug });
+    }
   }
 
   // If user owns a restaurant already, reuse it

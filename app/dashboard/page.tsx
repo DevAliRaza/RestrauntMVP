@@ -25,8 +25,11 @@ export default async function DashboardIndexPage() {
     .maybeSingle();
 
   if (member?.restaurants) {
-    const slug = (member.restaurants as { slug: string }).slug;
-    redirect(`/dashboard/${slug}`);
+    const rel = member.restaurants as { slug: string } | { slug: string }[];
+    const slug = Array.isArray(rel) ? rel[0]?.slug : rel.slug;
+    if (slug) {
+      redirect(`/dashboard/${slug}`);
+    }
   }
 
   // Fallback: if user owns a restaurant directly (owner_id)
