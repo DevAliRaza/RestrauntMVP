@@ -3,10 +3,16 @@ import DashboardShell from '@/components/layout/DashboardShell';
 
 export default async function OrdersPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ restaurantSlug: string }>;
+  searchParams: Promise<{ status?: string; q?: string }>;
 }) {
   const { restaurantSlug } = await params;
+  const { status: statusParam = 'all', q: qParam = '' } = await searchParams;
+  const currentStatus = statusParam || 'all';
+  const currentQuery = qParam || '';
+
   const supabase = await createSupabaseServerClient();
 
   const { data: restaurant } = await supabase
@@ -15,12 +21,26 @@ export default async function OrdersPage({
     .eq('slug', restaurantSlug)
     .single();
 
-  const { data: orders } = await supabase
+  let query = supabase
     .from('orders')
     .select('*, order_items(id, name_snapshot, quantity, total_price)')
     .eq('restaurant_id', restaurant?.id ?? null)
     .order('created_at', { ascending: false })
     .limit(50);
+
+  if (currentStatus !== 'all') {
+    query = query.eq('status', currentStatus);
+  }
+
+  if (currentQuery) {
+    // Match on customer name or phone
+    const pattern = `%${currentQuery}%`;
+    query = query.or(
+      `customer_name.ilike.${pattern},customer_phone.ilike.${pattern}`
+    );
+  }
+
+  const { data: orders } = await query;
 
   return (
     <DashboardShell restaurantSlug={restaurantSlug}>
@@ -31,6 +51,46 @@ export default async function OrdersPage({
             {orders?.length ?? 0} total
           </span>
         </div>
+
+        <form
+          method="get"
+          className="flex flex-wrap items-end gap-3 rounded-xl border border-zinc-900 bg-zinc-950/60 p-3"
+        >
+          <div>
+            <label className="mb-1 block text-[11px] text-zinc-400">
+              Status
+            </label>
+            <select
+              name="status"
+              defaultValue={currentStatus}
+              className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-[11px] outline-none ring-0 focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+            >
+              <option value="all">All</option>
+              <option value="new">New</option>
+              <option value="accepted">Accepted</option>
+              <option value="in_progress">In progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+          <div className="flex-1 min-w-[160px]">
+            <label className="mb-1 block text-[11px] text-zinc-400">
+              Search (name or phone)
+            </label>
+            <input
+              name="q"
+              defaultValue={currentQuery}
+              placeholder="e.g. ali or 0313…"
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-[11px] outline-none ring-0 focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+            />
+          </div>
+          <button
+            type="submit"
+            className="inline-flex items-center justify-center rounded-full bg-amber-400 px-4 py-2 text-[11px] font-semibold text-zinc-950 hover:bg-amber-300"
+          >
+            Apply
+          </button>
+        </form>
 
         {!orders || orders.length === 0 ? (
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-8 text-center">
