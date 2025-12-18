@@ -1,7 +1,10 @@
 declare module 'qrcode' {
-  // Minimal typing to satisfy TypeScript in environments where
-  // @types/qrcode may not be installed at build time.
-  const QRCode: any;
+  // Minimal surface we actually use in this project.
+  export interface QRCodeModule {
+    toDataURL(text: string, opts?: { margin?: number; width?: number }): Promise<string>;
+  }
+
+  const QRCode: QRCodeModule;
   export default QRCode;
 }
 
